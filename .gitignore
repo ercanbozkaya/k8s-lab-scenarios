@@ -1,0 +1,5 @@
+# Per-question evidence artifacts (captured by validate.sh --with-evidence)
+.question-artifacts/
+
+# Auto-generated manifest (rebuild from metadata.yaml)
+_manifest.yaml

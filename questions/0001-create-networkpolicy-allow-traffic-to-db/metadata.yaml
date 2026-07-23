@@ -1,0 +1,15 @@
+id: "0001-create-networkpolicy-allow-traffic-to-db"
+exam_domains: [CKA, CKAD, CKS]
+exam_topic: "Services & Networking"
+weight: 6
+difficulty: medium
+title: "Create NetworkPolicy allow-traffic-to-db"
+prompt: |
+  A web application deployment runs in the frontend namespace and a database
+  deployment runs in the database namespace.
+
+  Create a NetworkPolicy named allow-traffic-to-db that:
+    - Allows ingress traffic to the web-app workload from pods in the database namespace (match by label)
+    - Allows all traffic originating from the payments namespace
+
+  Utilize the labels applied on the relevant resources.
