@@ -45,27 +45,20 @@ INGRESS_JSON=$(k8s_exec get networkpolicy allow-traffic-to-db -n frontend \
   -o jsonpath='{.spec.ingress[0]}' 2>/dev/null || echo '{}')
 
 # 3. Must allow traffic from the database namespace pods (by podSelector matching app: db).
+# Uses jq instead of yq — works on macOS without extra installs.
 DB_RULE_EXISTS=false
-if echo "$INGRESS_JSON" | yq -e '.from[].podSelector.matchLabels["app"]' &>/dev/null; then
-  DB_SELECTOR=$(echo "$INGRESS_JSON" | yq -r '.from[].podSelector.matchLabels["app"]' 2>/dev/null || true)
-  if [ "$DB_SELECTOR" = "db" ]; then
-    DB_RULE_EXISTS=true
-  fi
+if echo "$INGRESS_JSON" | jq -e '.from[] | select(.podSelector.matchLabels.app == "db")' &>/dev/null; then
+  DB_RULE_EXISTS=true
 fi
-echo "$DB_RULE_EXISTS"; _pass=$?; check "db-ingress-label" \
+[ "$DB_RULE_EXISTS" = "true" ]; _pass=$?; check "db-ingress-label" \
   "Ingress rule has a podSelector matching app=db (from database namespace)" "$_pass"
 
 # 4. Must allow all traffic from the payments namespace (namespaceSelector).
 PAYMENTS_RULE_EXISTS=false
-if echo "$INGRESS_JSON" | yq -e '.from[].namespaceSelector.matchLabels' &>/dev/null; then
-  PAYMENTS_NS=$(echo "$INGRESS_JSON" | yq -r '.from[].namespaceSelector.matchLabels' 2>/dev/null || true)
-  # A bare namespaceSelector (no app label filter) means "all traffic from this ns".
-  # We accept either a bare {} or any namespaceSelector — check that the ns label is empty/absent.
-  if [ -z "$PAYMENTS_NS" ] || [ "$PAYMENTS_NS" = "{}" ]; then
-    PAYMENTS_RULE_EXISTS=true
-  fi
+if echo "$INGRESS_JSON" | jq -e '.from[] | select(.namespaceSelector.matchLabels == {} or .namespaceSelector.matchLabels == null)' &>/dev/null; then
+  PAYMENTS_RULE_EXISTS=true
 fi
-echo "$PAYMENTS_RULE_EXISTS"; _pass=$?; check "payments-namespace-selector" \
+[ "$PAYMENTS_RULE_EXISTS" = "true" ]; _pass=$?; check "payments-namespace-selector" \
   "Ingress rule has a namespaceSelector allowing all traffic from payments namespace" "$_pass"
 
 # 5. Policy podSelector must target the web-app workload in frontend namespace.
